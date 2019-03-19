@@ -1,0 +1,6 @@
+/.vscode
+/log
+/checkpoint
+/.ipynb_checkpoints
+/trainfaces
+/testfaces
