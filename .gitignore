@@ -2,5 +2,6 @@
 /log
 /checkpoint
 /.ipynb_checkpoints
-/trainfaces
-/testfaces
+/dataset_training
+/dataset_testing
+/lib
