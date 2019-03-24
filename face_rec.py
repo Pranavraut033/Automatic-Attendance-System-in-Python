@@ -2,18 +2,23 @@
 # coding: utf-8
 
 # In[ ]:
-
-
 import os
 import pickle
+import time
+from collections import Counter
 
 import cv2
 import face_recognition
+import mysql.connector
 from imutils import paths
-from collections import Counter
 from IPython.display import clear_output
 
-
+DB_CONNECT = mysql.connector.connect(
+    host="localhost",
+    port="3308",
+    user="root",
+    passwd=""
+)
 FACE_CASCADE = "classifier/haarcascade_frontalface_default.xml"
 IMG_SIZE = 128
 
@@ -24,10 +29,12 @@ MODEL_NAME = 'model_encodings.pickle'
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FACE_CLASSIFIER = cv2.CascadeClassifier(FACE_CASCADE)
 
+mycursor = DB_CONNECT.cursor()
+
+mycursor.execute("USE `student_record`")
+
 
 # In[ ]:
-
-
 # grab the paths to the input images in our dataset
 print("[INFO] fetching images...")
 image_paths = list(paths.list_images(TRAINING_DATASET))
@@ -75,7 +82,6 @@ print("[INFO] DONE.")
 
 # In[ ]:
 
-
 # load the known faces and embeddings
 print("[INFO] loading encodings...")
 data = pickle.loads(open(MODEL_NAME, "rb").read())
@@ -83,8 +89,8 @@ data = pickle.loads(open(MODEL_NAME, "rb").read())
 print("[INFO] recognizing faces...")
 
 cam = cv2.VideoCapture(0)
-cam.set(cv2.CAP_PROP_FRAME_WIDTH , 1280)
-cam.set(cv2.CAP_PROP_FRAME_HEIGHT  , 720)
+cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 # cam.set(3, 1280)
 
 # cam.set(4, 1024)
@@ -92,16 +98,17 @@ cam.set(cv2.CAP_PROP_FRAME_HEIGHT  , 720)
 cv2.namedWindow("recognize faces")
 
 num_names = Counter(data['names'])
+present_name = list()
 
 while True:
     ret, org = cam.read()
     if not ret:
         break
     k = cv2.waitKey(1)
-    
+
     cv2.imshow("recognize faces", org)
 
-    if k%256 == 27:
+    if k % 256 == 27:
         print("\nEscape hit, closing...")
         break
 
@@ -109,17 +116,17 @@ while True:
 
     # detect the (x, y)-coordinates of the bounding boxes corresponding
     # to each face in the input image, then compute the facial embeddings
-    # for each face 
+    # for each face
     faces = FACE_CLASSIFIER.detectMultiScale(org)
     clear_output(wait=True)
 
     for (i, f) in enumerate(faces):
-        x, y, w, h = [ v for v in f ]
+        x, y, w, h = [v for v in f]
 
-        sub_face = org[y : y+h+15, x : x + w + 15]
+        sub_face = org[y: y+h+15, x: x + w + 15]
 #         cv2.imshow(str(i), sub_face)
 
-        image = cv2.resize(sub_face, (IMG_SIZE,IMG_SIZE))
+        image = cv2.resize(sub_face, (IMG_SIZE, IMG_SIZE))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -133,7 +140,8 @@ while True:
         for encoding in encodings:
             # attempt to match each face in the input image to our known
             # encodings
-            matches = face_recognition.compare_faces(data["encodings"], encoding)
+            matches = face_recognition.compare_faces(
+                data["encodings"], encoding)
             num_prop = 0
             # check to see if we have found a match
             if True in matches:
@@ -155,10 +163,20 @@ while True:
                 num_prop = counts[name] / num_names[name]
                 # update the list of names
 
-                print("[INFO] detected %s with '%f' accuracy ..." % (name, num_prop))
+                print("[INFO] detected %s with '%f' accuracy ..." %
+                      (name, num_prop))
 
             if(num_prop > 0.85):
+                t = time.strftime('%Y-%m-%d %H:%M:%S')
+
+                if name not in present_name:
+                    q = "INSERT INTO attendance(name,timestamp) values ('" + \
+                        name + "', '" + t + "');"
+                    mycursor.execute(q)
+
                 print("[INFO] Found %s (%f)." % (name, num_prop))
+
+                present_name.append(name)
 
             boxes.append((y, x + w, y + h, x))
             names.append(name if num_prop > 0.8 else "Unknown")
@@ -166,7 +184,8 @@ while True:
             # loop over the recognized faces
             for ((top, right, bottom, left), name) in zip(boxes, names):
                 # draw the predicted face name on the image
-                cv2.rectangle(org, (left, top), (right, bottom), (255, 255, 255), 2)
+                cv2.rectangle(org, (left, top), (right, bottom),
+                              (255, 255, 255), 2)
                 y = top - 15 if top - 15 > 15 else top + 15
                 cv2.putText(org, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
                             0.75, (0, 255, 0), 2)
@@ -179,8 +198,8 @@ cam.release()
 cv2.destroyAllWindows()
 
 
-# In[ ]:
+# %%
+c = ['a']
+not 'c' in c
 
-
-
-
+# %%
