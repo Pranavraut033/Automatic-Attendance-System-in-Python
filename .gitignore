@@ -5,3 +5,5 @@
 /dataset_training
 /dataset_testing
 /lib
+*.mp4
+*.avi
